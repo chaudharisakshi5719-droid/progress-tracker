@@ -5,8 +5,8 @@ spring:
     name: progress-tracker
   datasource:
     url: jdbc:postgresql:${DB_URL}
-    username: postgres
-    password: 140503
+    username: ${DB_USER}
+    password: ${DB_PASS}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
