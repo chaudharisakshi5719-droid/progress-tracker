@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - ProgressTracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        .stat-card {
+            border: none;
+            border-radius: 0.75rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+        }
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        .heatmap-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .heatmap-cell {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+        }
+        .intensity-0 { background-color: #ebedf0; }
+        .intensity-1 { background-color: #9be9a8; }
+        .intensity-2 { background-color: #40c463; }
+        .intensity-3 { background-color: #30a14e; }
+        .intensity-4 { background-color: #216e39; }
+    </style>
+</head>
+<body class="bg-light d-flex flex-column min-vh-100">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="container-fluid px-4 py-4">
+        <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+        <!-- Welcome Banner -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold mb-1">Welcome back, <span th:text="${user.firstName}">User</span>!</h2>
+                <p class="text-muted">Here is your daily streak, progress summary, and activity overview.</p>
+            </div>
+            <a href="/tasks/new" class="btn btn-warning fw-bold shadow-sm">
+                <i class="bi bi-plus-lg me-1"></i> New Task
+            </a>
+        </div>
+
+        <!-- 6 Summary Stat Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="card stat-card p-3 h-100">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-primary bg-opacity-10 text-primary me-3">
+                            <i class="bi bi-list-task"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Total Tasks</div>
+                            <h4 class="fw-bold mb-0" th:text="${stats.totalTasks}">0</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="card stat-card p-3 h-100">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-info bg-opacity-10 text-info me-3">
+                            <i class="bi bi-play-circle"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Active Tasks</div>
+                            <h4 class="fw-bold mb-0" th:text="${stats.activeTasks}">0</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="card stat-card p-3 h-100">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-success bg-opacity-10 text-success me-3">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Completed Today</div>
+                            <h4 class="fw-bold mb-0" th:text="${stats.completedTodayCount}">0</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="card stat-card p-3 h-100 border-start border-warning border-4">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-warning bg-opacity-10 text-warning me-3">
+                            <i class="bi bi-fire"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Current Streak</div>
+                            <h4 class="fw-bold mb-0 text-warning"><span th:text="${stats.bestCurrentStreak}">0</span> 🔥</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="card stat-card p-3 h-100">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-danger bg-opacity-10 text-danger me-3">
+                            <i class="bi bi-trophy"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Longest Streak</div>
+                            <h4 class="fw-bold mb-0"><span th:text="${stats.bestLongestStreak}">0</span> days</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="card stat-card p-3 h-100">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-secondary bg-opacity-10 text-secondary me-3">
+                            <i class="bi bi-pie-chart"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Overall %</div>
+                            <h4 class="fw-bold mb-0"><span th:text="${stats.overallCompletionPercentage}">0.0</span>%</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Heatmap Activity Grid -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card stat-card p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-calendar3 me-2 text-primary"></i> 60-Day Activity Heatmap</h5>
+                        <div class="d-flex align-items-center small text-muted">
+                            <span class="me-2">Less</span>
+                            <span class="heatmap-cell intensity-0 d-inline-block me-1"></span>
+                            <span class="heatmap-cell intensity-1 d-inline-block me-1"></span>
+                            <span class="heatmap-cell intensity-2 d-inline-block me-1"></span>
+                            <span class="heatmap-cell intensity-3 d-inline-block me-1"></span>
+                            <span class="heatmap-cell intensity-4 d-inline-block me-2"></span>
+                            <span>More</span>
+                        </div>
+                    </div>
+                    <div class="heatmap-grid p-2 border rounded bg-white">
+                        <div th:each="cell : ${stats.heatmapData}" 
+                             th:class="'heatmap-cell intensity-' + ${cell.intensity}"
+                             data-bs-toggle="tooltip" 
+                             data-bs-placement="top"
+                             th:title="${cell.tooltipText}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3 Charts Row -->
+        <div class="row g-4">
+            <!-- Overall Completion Doughnut -->
+            <div class="col-md-4">
+                <div class="card stat-card p-3 h-100">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-pie-chart-fill me-2 text-success"></i> Overall Completion Ratio</h6>
+                    <div class="chart-container" style="position: relative; height:240px;">
+                        <canvas id="completionDoughnutChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weekly Completion Line Chart -->
+            <div class="col-md-4">
+                <div class="card stat-card p-3 h-100">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-graph-up-arrow me-2 text-info"></i> Daily Completions (14 Days)</h6>
+                    <div class="chart-container" style="position: relative; height:240px;">
+                        <canvas id="weeklyLineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Progress Bar Chart -->
+            <div class="col-md-4">
+                <div class="card stat-card p-3 h-100">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart-line-fill me-2 text-warning"></i> Category Progress (%)</h6>
+                    <div class="chart-container" style="position: relative; height:240px;">
+                        <canvas id="categoryBarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <div th:replace="~{fragments/scripts :: scripts}"></div>
+
+    <script th:inline="javascript">
+        document.addEventListener("DOMContentLoaded", function() {
+            // Enable tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Data passed from Spring Boot controller
+            const overallPct = /*[[${stats.overallCompletionPercentage}]]*/ 0;
+            const categoryLabels = /*[[${stats.categoryChartLabels}]]*/ [];
+            const categoryData = /*[[${stats.categoryChartData}]]*/ [];
+            const categoryColors = /*[[${stats.categoryChartColors}]]*/ [];
+            const weeklyLabels = /*[[${stats.weeklyChartLabels}]]*/ [];
+            const weeklyData = /*[[${stats.weeklyChartData}]]*/ [];
+
+            // 1. Doughnut Chart
+            new Chart(document.getElementById('completionDoughnutChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Completed', 'Remaining / Missed'],
+                    datasets: [{
+                        data: [overallPct, Math.max(0, 100 - overallPct)],
+                        backgroundColor: ['#198754', '#e9ecef'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // 2. Line Chart
+            new Chart(document.getElementById('weeklyLineChart'), {
+                type: 'line',
+                data: {
+                    labels: weeklyLabels,
+                    datasets: [{
+                        label: 'Completions',
+                        data: weeklyData,
+                        borderColor: '#0dcaf0',
+                        backgroundColor: 'rgba(13, 202, 240, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+
+            // 3. Category Bar Chart
+            new Chart(document.getElementById('categoryBarChart'), {
+                type: 'bar',
+                data: {
+                    labels: categoryLabels,
+                    datasets: [{
+                        label: 'Progress (%)',
+                        data: categoryData,
+                        backgroundColor: categoryColors.length ? categoryColors : '#ffc107',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

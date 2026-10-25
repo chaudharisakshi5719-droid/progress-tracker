@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Tasks - ProgressTracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        .task-card {
+            border: none;
+            border-radius: 0.75rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+        }
+        .badge-streak {
+            font-size: 0.85rem;
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+    </style>
+</head>
+<body class="bg-light d-flex flex-column min-vh-100">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="container-fluid px-4 py-4">
+        <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold mb-1"><i class="bi bi-check2-square text-warning me-2"></i> My Tasks</h2>
+                <p class="text-muted">Manage your habit goals, record daily progress, and track streaks.</p>
+            </div>
+            <a href="/tasks/new" class="btn btn-warning fw-bold shadow-sm">
+                <i class="bi bi-plus-lg me-1"></i> Add Task
+            </a>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="card task-card p-3 mb-4">
+            <form th:action="@{/tasks}" method="get" class="row g-2 align-items-center">
+                <div class="col-md-3">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                        <input type="text" name="search" class="form-control" placeholder="Search tasks..." th:value="${searchQuery}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="categoryId" class="form-select">
+                        <option value="">All Categories</option>
+                        <option th:each="cat : ${categories}" 
+                                th:value="${cat.id}" 
+                                th:text="${cat.name}" 
+                                th:selected="${cat.id == selectedCategoryId}">Category</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="active" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="true" th:selected="${selectedActive == true}">Active Only</option>
+                        <option value="false" th:selected="${selectedActive == false}">Inactive Only</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="sortBy" class="form-select">
+                        <option value="startDate" th:selected="${sortBy == 'startDate'}">Start Date</option>
+                        <option value="title" th:selected="${sortBy == 'title'}">Title</option>
+                        <option value="endDate" th:selected="${sortBy == 'endDate'}">End Date</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark w-100"><i class="bi bi-filter me-1"></i> Filter</button>
+                    <a href="/tasks" class="btn btn-outline-secondary" title="Reset Filters"><i class="bi bi-arrow-counterclockwise"></i></a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Task List Table -->
+        <div class="card task-card shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Category</th>
+                                <th>Task Title</th>
+                                <th>Schedule</th>
+                                <th>Overall Progress</th>
+                                <th>Current Streak</th>
+                                <th>Status</th>
+                                <th class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:if="${tasksPage.empty}">
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                    No tasks found matching your filter criteria. <a href="/tasks/new">Create a new task</a> to get started!
+                                </td>
+                            </tr>
+                            <tr th:each="task : ${tasksPage.content}">
+                                <td>
+                                    <span class="badge rounded-pill px-3 py-2 text-white" 
+                                          th:style="'background-color: ' + ${task.categoryColor}" 
+                                          th:text="${task.categoryName}">Category</span>
+                                </td>
+                                <td>
+                                    <a th:href="@{/tasks/{id}(id=${task.id})}" class="fw-bold text-decoration-none text-dark" th:text="${task.title}">Task Title</a>
+                                    <small th:if="${task.description}" class="text-muted d-block text-truncate" style="max-width: 250px;" th:text="${task.description}">Description</small>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar-event me-1"></i>
+                                        <span th:text="${#temporals.format(task.startDate, 'MMM dd, yyyy')}">Start</span> 
+                                        &rarr; 
+                                        <span th:text="${#temporals.format(task.endDate, 'MMM dd, yyyy')}">End</span>
+                                    </small>
+                                </td>
+                                <td style="min-width: 150px;">
+                                    <div class="d-flex justify-content-between small mb-1">
+                                        <span class="fw-bold" th:text="${task.completionPercentage + '%'}">70%</span>
+                                        <span class="text-muted" th:text="${task.completedDays + '/' + task.totalPossibleDays + ' days'}">21/30</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-success" role="progressbar" 
+                                             th:style="'width: ' + ${task.completionPercentage} + '%'" 
+                                             th:aria-valuenow="${task.completionPercentage}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge badge-streak rounded-pill px-3 py-2 fw-bold">
+                                        🔥 <span th:text="${task.currentStreak}">0</span> days
+                                    </span>
+                                </td>
+                                <td>
+                                    <span th:if="${task.active}" class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">Active</span>
+                                    <span th:if="${!task.active}" class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1">Inactive</span>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="d-inline-flex gap-1">
+                                        <!-- Complete Today Button -->
+                                        <div th:if="${task.active}">
+                                            <form th:if="${!task.completedToday}" th:action="@{/tasks/{id}/complete(id=${task.id})}" method="post" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-success fw-bold shadow-sm">
+                                                    <i class="bi bi-check-lg me-1"></i> Complete Today
+                                                </button>
+                                            </form>
+                                            <form th:if="${task.completedToday}" th:action="@{/tasks/{id}/undo(id=${task.id})}" method="post" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-outline-success fw-bold me-1" title="Click to undo today's completion">
+                                                    ✓ Completed <span class="badge bg-danger ms-1">Undo</span>
+                                                </button>
+                                            </form>
+                                        </div>
+
+                                        <a th:href="@{/tasks/{id}(id=${task.id})}" class="btn btn-sm btn-outline-primary" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a th:href="@{/tasks/{id}/edit(id=${task.id})}" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+
+                                        <!-- Delete Confirmation Modal Trigger -->
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" th:data-bs-target="'#deleteModal' + ${task.id}" title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+
+                                        <!-- Modal -->
+                                        <div class="modal fade text-start" th:id="'deleteModal' + ${task.id}" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header bg-danger text-white">
+                                                        <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i> Confirm Deletion</h5>
+                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        Are you sure you want to delete task <strong>"<span th:text="${task.title}">Task</span>"</strong>?
+                                                        This action will permanently delete all completion history for this task.
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                        <form th:action="@{/tasks/{id}/delete(id=${task.id})}" method="post">
+                                                            <button type="submit" class="btn btn-danger fw-bold">Delete Task</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3" th:if="${tasksPage.totalPages > 1}">
+                <div class="small text-muted">
+                    Showing <span th:text="${tasksPage.number * tasksPage.size + 1}">1</span> to 
+                    <span th:text="${Math.min((tasksPage.number + 1) * tasksPage.size, tasksPage.totalElements)}">10</span> 
+                    of <span th:text="${tasksPage.totalElements}">20</span> tasks
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item" th:classappend="${tasksPage.first} ? 'disabled'">
+                            <a class="page-link" th:href="@{/tasks(page=${tasksPage.number - 1}, size=${tasksPage.size}, categoryId=${selectedCategoryId}, active=${selectedActive}, search=${searchQuery}, sortBy=${sortBy})}">Previous</a>
+                        </li>
+                        <li class="page-item" th:each="i : ${#numbers.sequence(0, tasksPage.totalPages - 1)}"
+                            th:classappend="${i == tasksPage.number} ? 'active'">
+                            <a class="page-link" th:href="@{/tasks(page=${i}, size=${tasksPage.size}, categoryId=${selectedCategoryId}, active=${selectedActive}, search=${searchQuery}, sortBy=${sortBy})}" th:text="${i + 1}">1</a>
+                        </li>
+                        <li class="page-item" th:classappend="${tasksPage.last} ? 'disabled'">
+                            <a class="page-link" th:href="@{/tasks(page=${tasksPage.number + 1}, size=${tasksPage.size}, categoryId=${selectedCategoryId}, active=${selectedActive}, search=${searchQuery}, sortBy=${sortBy})}">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <div th:replace="~{fragments/scripts :: scripts}"></div>
+</body>
+</html>

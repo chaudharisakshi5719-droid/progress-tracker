@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${task.title} + ' - ProgressTracker'">Task Detail</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        .detail-card {
+            border: none;
+            border-radius: 0.75rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+        .calendar-cell {
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-light d-flex flex-column min-vh-100">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="container py-4">
+        <div th:replace="~{fragments/alerts :: alerts}"></div>
+
+        <!-- Breadcrumb & Actions -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/tasks">My Tasks</a></li>
+                    <li class="breadcrumb-item active" th:text="${task.title}">Task Detail</li>
+                </ol>
+            </nav>
+            <div class="d-flex gap-2">
+                <a th:href="@{/tasks/{id}/edit(id=${task.id})}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-pencil me-1"></i> Edit Task
+                </a>
+                <a href="/tasks" class="btn btn-light btn-sm"><i class="bi bi-arrow-left me-1"></i> Back</a>
+            </div>
+        </div>
+
+        <!-- Main Task Overview Card -->
+        <div class="card detail-card p-4 mb-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge rounded-pill px-3 py-2 text-white me-2" 
+                              th:style="'background-color: ' + ${task.categoryColor}" 
+                              th:text="${task.categoryName}">Category</span>
+                        <span th:if="${task.active}" class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">Active</span>
+                        <span th:if="${!task.active}" class="badge bg-secondary bg-opacity-10 text-secondary border px-2 py-1">Inactive</span>
+                    </div>
+                    <h2 class="fw-bold mb-2" th:text="${task.title}">Task Title</h2>
+                    <p class="text-muted" th:text="${task.description != null ? task.description : 'No description provided.'}">Description</p>
+                    
+                    <div class="d-flex gap-4 small text-muted">
+                        <div><i class="bi bi-calendar-event me-1"></i> Start: <strong th:text="${#temporals.format(task.startDate, 'MMM dd, yyyy')}">Start</strong></div>
+                        <div><i class="bi bi-calendar-check me-1"></i> End: <strong th:text="${#temporals.format(task.endDate, 'MMM dd, yyyy')}">End</strong></div>
+                        <div><i class="bi bi-arrow-repeat me-1"></i> Frequency: <strong th:text="${task.targetFrequency}">DAILY</strong></div>
+                    </div>
+                </div>
+
+                <!-- Complete Action Box -->
+                <div class="col-md-4 text-md-end mt-3 mt-md-0 border-start ps-md-4">
+                    <div th:if="${task.active}">
+                        <div th:if="${!task.completedToday}">
+                            <form th:action="@{/tasks/{id}/complete(id=${task.id})}" method="post">
+                                <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm">
+                                    <i class="bi bi-check-circle me-1"></i> Complete Today
+                                </button>
+                            </form>
+                            <small class="text-muted d-block mt-2">Mark your task complete for today!</small>
+                        </div>
+                        <div th:if="${task.completedToday}">
+                            <div class="alert alert-success text-center mb-2 py-2 fw-bold">
+                                ✓ Completed Today!
+                            </div>
+                            <form th:action="@{/tasks/{id}/undo(id=${task.id})}" method="post">
+                                <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                    Undo Today's Completion
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4 Stats Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card detail-card p-3 border-start border-warning border-4">
+                    <div class="text-muted small">Current Streak</div>
+                    <h3 class="fw-bold mb-0 text-warning"><span th:text="${task.currentStreak}">0</span> 🔥</h3>
+                    <small class="text-muted">consecutive days</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card detail-card p-3">
+                    <div class="text-muted small">Longest Streak</div>
+                    <h3 class="fw-bold mb-0"><span th:text="${task.longestStreak}">0</span> 🏆</h3>
+                    <small class="text-muted">all-time record</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card detail-card p-3">
+                    <div class="text-muted small">Completion Rate</div>
+                    <h3 class="fw-bold mb-0"><span th:text="${task.completionPercentage}">0.0</span>%</h3>
+                    <small class="text-muted" th:text="${task.completedDays + ' of ' + task.totalPossibleDays + ' days'}">0 of 0</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card detail-card p-3">
+                    <div class="text-muted small">Days Remaining</div>
+                    <h3 class="fw-bold mb-0" th:text="${task.remainingDays}">0</h3>
+                    <small class="text-muted">until task end date</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Calendar View -->
+        <div class="card detail-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="fw-bold mb-0"><i class="bi bi-calendar3 me-2 text-primary"></i> Monthly Completion History</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <a th:href="@{/tasks/{id}(id=${task.id}, year=${currentMonth == 1 ? currentYear - 1 : currentYear}, month=${currentMonth == 1 ? 12 : currentMonth - 1})}" 
+                       class="btn btn-outline-secondary btn-sm"><i class="bi bi-chevron-left"></i> Prev</a>
+                    <span class="fw-bold px-2" th:text="${currentYear + ' - Month ' + currentMonth}">Month</span>
+                    <a th:href="@{/tasks/{id}(id=${task.id}, year=${currentMonth == 12 ? currentYear + 1 : currentYear}, month=${currentMonth == 12 ? 1 : currentMonth + 1})}" 
+                       class="btn btn-outline-secondary btn-sm">Next <i class="bi bi-chevron-right"></i></a>
+                </div>
+            </div>
+
+            <!-- Calendar Legend -->
+            <div class="d-flex gap-3 mb-3 small">
+                <div><span class="badge bg-success me-1">✓</span> Completed</div>
+                <div><span class="badge bg-danger me-1">✗</span> Missed</div>
+                <div><span class="badge bg-secondary me-1">-</span> Future</div>
+                <div><span class="badge bg-light text-muted border me-1">·</span> Not Started</div>
+            </div>
+
+            <div class="calendar-grid">
+                <div th:each="day : ${calendarDays}" th:class="'calendar-cell ' + ${day.statusBadgeClass}">
+                    <div th:text="${#temporals.format(day.date, 'dd')}">01</div>
+                    <small class="d-block" style="font-size:0.75rem;">
+                        <span th:if="${day.status == 'COMPLETED'}">✓</span>
+                        <span th:if="${day.status == 'MISSED'}">✗</span>
+                        <span th:if="${day.status == 'FUTURE'}">-</span>
+                        <span th:if="${day.status == 'NOT_STARTED'}">·</span>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <div th:replace="~{fragments/scripts :: scripts}"></div>
+</body>
+</html>
